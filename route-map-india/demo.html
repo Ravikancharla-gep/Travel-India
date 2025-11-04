@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Route Map - India Travel Tracker (Demo)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { margin: 0; font-family: 'Inter', system-ui, sans-serif; }
+        .leaflet-container { height: 100vh; width: 100%; }
+        .custom-popup .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+        .custom-popup .leaflet-popup-content {
+            margin: 0;
+            padding: 0;
+        }
+        .route-line {
+            stroke-width: 4;
+            stroke-dasharray: 10, 5;
+            animation: dash 1s linear infinite;
+        }
+        @keyframes dash {
+            to { stroke-dashoffset: -15; }
+        }
+        .image-preview {
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+        .image-preview:hover {
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body>
+    <div class="h-screen flex bg-gray-50">
+        <!-- Sidebar -->
+        <div class="w-80 bg-white shadow-lg flex flex-col h-full">
+            <!-- Header -->
+            <div class="p-6 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-gray-800 mb-2">My Route Map</h1>
+                <p class="text-gray-600 text-sm">Track your India travels</p>
+            </div>
+
+            <!-- Trip Lists -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-gray-800">Trip Lists</h2>
+                </div>
+
+                <!-- Kerala Trip -->
+                <div class="p-3 rounded-lg bg-teal-50 border-2 border-teal-300 mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-4 h-4 rounded-full bg-teal-500"></div>
+                        <div>
+                            <h3 class="font-medium text-gray-800">Kerala Trip</h3>
+                            <p class="text-sm text-gray-500">3 places</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Places List -->
+                <div class="space-y-2">
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-medium text-gray-600">1</span>
+                        <span class="text-gray-700">Munnar</span>
+                        <span class="text-gray-500 text-xs">(Bus)</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-medium text-gray-600">2</span>
+                        <span class="text-gray-700">Kochi</span>
+                        <span class="text-gray-500 text-xs">(Car)</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-sm">
+                        <span class="w-6 h-6 bg-white rounded-full flex items-center justify-center text-xs font-medium text-gray-600">3</span>
+                        <span class="text-gray-700">Alleppey</span>
+                        <span class="text-gray-500 text-xs">(Boat)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Trip Info -->
+            <div class="p-4 border-t border-gray-200 bg-gray-50">
+                <div class="flex items-center gap-2 mb-3">
+                    <div class="w-3 h-3 rounded-full bg-teal-500"></div>
+                    <h3 class="font-medium text-gray-800">Kerala Trip</h3>
+                </div>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="text-sm text-gray-600">
+                        <strong>Munnar:</strong> Beautiful hill station known for tea plantations and cool climate.
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <strong>Kochi:</strong> Historic port city with colonial architecture and spice markets.
+                    </div>
+                    <div class="text-sm text-gray-600">
+                        <strong>Alleppey:</strong> Famous for backwaters and houseboat cruises.
+                    </div>
+                </div>
+
+                <button class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                    </svg>
+                    Add Place
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Map Area -->
+        <div class="flex-1 relative">
+            <div id="map" class="h-full w-full"></div>
+
+            <!-- Floating Action Button -->
+            <button class="absolute bottom-6 right-6 bg-teal-600 hover:bg-teal-700 text-white p-4 rounded-full shadow-lg transition-colors duration-200 z-10">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                </svg>
+            </button>
+
+            <!-- Hover Preview -->
+            <div class="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-2 z-20 max-w-xs">
+                <div class="w-32 h-24 bg-gray-200 rounded flex items-center justify-center">
+                    <span class="text-gray-500 text-sm">Image Preview</span>
+                </div>
+                <p class="text-sm font-medium text-gray-800 mt-1">Hover over markers</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+    <script>
+        // Initialize map centered on India
+        const map = L.map('map').setView([20.5937, 78.9629], 6);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Custom marker icon
+        const createCustomIcon = (color) => L.icon({
+            iconUrl: `data:image/svg+xml;base64,${btoa(`
+                <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="${color}" stroke="#fff" stroke-width="2" d="M12.5 0C5.6 0 0 5.6 0 12.5c0 12.5 12.5 28.5 12.5 28.5s12.5-16 12.5-28.5C25 5.6 19.4 0 12.5 0z"/>
+                    <circle fill="#fff" cx="12.5" cy="12.5" r="6"/>
+                </svg>
+            `)}`,
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [0, -41],
+        });
+
+        // Kerala Trip places
+        const keralaPlaces = [
+            {
+                name: 'Munnar',
+                coords: [10.0892, 77.0597],
+                transport: 'Bus',
+                distance: '120 km',
+                time: '4 hrs',
+                description: 'Beautiful hill station known for tea plantations and cool climate.'
+            },
+            {
+                name: 'Kochi',
+                coords: [9.9312, 76.2673],
+                transport: 'Car',
+                distance: '130 km',
+                time: '3.5 hrs',
+                description: 'Historic port city with colonial architecture and spice markets.'
+            },
+            {
+                name: 'Alleppey',
+                coords: [9.4981, 76.3388],
+                transport: 'Boat',
+                distance: '85 km',
+                time: '2 hrs',
+                description: 'Famous for backwaters and houseboat cruises.'
+            }
+        ];
+
+        const tripColor = '#00BFA5';
+
+        // Add markers and routes
+        keralaPlaces.forEach((place, index) => {
+            // Add marker
+            const marker = L.marker(place.coords, { icon: createCustomIcon(tripColor) })
+                .addTo(map)
+                .bindPopup(`
+                    <div class="p-4 min-w-[280px]">
+                        <div class="flex items-center gap-2 mb-3">
+                            <svg class="w-4 h-4 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            </svg>
+                            <h3 class="font-semibold text-gray-800 text-lg">${place.name}</h3>
+                        </div>
+                        
+                        <p class="text-gray-600 text-sm mb-3 leading-relaxed">
+                            ${place.description}
+                        </p>
+                        
+                        <div class="space-y-2 mb-3">
+                            <div class="flex items-center gap-2 text-sm">
+                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                </svg>
+                                <span class="text-gray-700">
+                                    Transport: <span class="font-medium">${place.transport}</span>
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 text-sm">
+                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"></path>
+                                </svg>
+                                <span class="text-gray-700">
+                                    Distance: <span class="font-medium">${place.distance}</span>
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center gap-2 text-sm">
+                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <span class="text-gray-700">
+                                    Time: <span class="font-medium">${place.time}</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="text-xs text-gray-500 mb-3">
+                            <div>Lat: ${place.coords[0].toFixed(4)}</div>
+                            <div>Lng: ${place.coords[1].toFixed(4)}</div>
+                        </div>
+                    </div>
+                `, { className: 'custom-popup' });
+
+            // Add route line to previous place
+            if (index > 0) {
+                const polyline = L.polyline([keralaPlaces[index - 1].coords, place.coords], {
+                    color: tripColor,
+                    weight: 4,
+                    opacity: 0.7,
+                    className: 'route-line'
+                }).addTo(map);
+            }
+        });
+
+        // Add some interactivity
+        console.log('🗺️ My Route Map - India Travel Tracker Demo');
+        console.log('📍 Kerala Trip with 3 places loaded');
+        console.log('🎨 Interactive map with custom markers and routes');
+        console.log('✨ Hover over markers to see details');
+    </script>
+</body>
+</html>
